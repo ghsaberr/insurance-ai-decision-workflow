@@ -1,0 +1,300 @@
+[
+  {
+    "id": "EVAL_S01",
+    "category": "straightforward_approve",
+    "description": "Clean profile — strong accept signals across all dimensions",
+    "input": {
+      "policyholder_id": "EVAL_PH_S01",
+      "age": 38,
+      "annual_income": 85000,
+      "credit_score": 760,
+      "policy_type": "auto",
+      "claims_history": [],
+      "premium_amount": 1200
+    },
+    "expected": {
+      "recommendation": "approve",
+      "risk_level": "Low",
+      "hard_decline": false,
+      "rule_violations": []
+    }
+  },
+  {
+    "id": "EVAL_S02",
+    "category": "straightforward_approve",
+    "description": "Mid-range profile — good credit, stable income, single minor claim",
+    "input": {
+      "policyholder_id": "EVAL_PH_S02",
+      "age": 44,
+      "annual_income": 62000,
+      "credit_score": 710,
+      "policy_type": "home",
+      "claims_history": [{"amount": 2500, "date": "2022-03-15"}],
+      "premium_amount": 1800
+    },
+    "expected": {
+      "recommendation_in": ["approve", "refer"],
+      "risk_level_in": ["Low", "Medium"],
+      "hard_decline": false,
+      "rule_violations": []
+    }
+  },
+  {
+    "id": "EVAL_S03",
+    "category": "straightforward_decline",
+    "description": "Hard decline — applicant is underage",
+    "input": {
+      "policyholder_id": "EVAL_PH_S03",
+      "age": 16,
+      "annual_income": 5000,
+      "credit_score": 580,
+      "policy_type": "auto",
+      "claims_history": [],
+      "premium_amount": 2400
+    },
+    "expected": {
+      "recommendation": "decline",
+      "hard_decline": true,
+      "rule_violations_contains": ["age_below_minimum"]
+    }
+  },
+  {
+    "id": "EVAL_M01",
+    "category": "missing_evidence",
+    "description": "No claims history provided — assessment should proceed on available signals",
+    "input": {
+      "policyholder_id": "EVAL_PH_M01",
+      "age": 29,
+      "annual_income": 41000,
+      "credit_score": 640,
+      "policy_type": "renters",
+      "claims_history": [],
+      "premium_amount": 600
+    },
+    "expected": {
+      "recommendation_in": ["approve", "refer"],
+      "hard_decline": false,
+      "evidence_refs_count_gte": 0,
+      "rationale_not_empty": true
+    }
+  },
+  {
+    "id": "EVAL_M02",
+    "category": "missing_evidence",
+    "description": "Income below minimum threshold — workflow should flag but not hard-decline",
+    "input": {
+      "policyholder_id": "EVAL_PH_M02",
+      "age": 23,
+      "annual_income": 14000,
+      "credit_score": 620,
+      "policy_type": "renters",
+      "claims_history": [],
+      "premium_amount": 500
+    },
+    "expected": {
+      "recommendation_in": ["refer", "decline"],
+      "hard_decline": false,
+      "rule_violations_contains": ["income_below_minimum"]
+    }
+  },
+  {
+    "id": "EVAL_M03",
+    "category": "missing_evidence",
+    "description": "No policy_start_date — claims recency check must not crash",
+    "input": {
+      "policyholder_id": "EVAL_PH_M03",
+      "age": 51,
+      "annual_income": 73000,
+      "credit_score": 680,
+      "policy_type": "auto",
+      "claims_history": [{"amount": 3000}],
+      "premium_amount": 1400
+    },
+    "expected": {
+      "recommendation_in": ["approve", "refer"],
+      "hard_decline": false,
+      "error": null
+    }
+  },
+  {
+    "id": "EVAL_C01",
+    "category": "conflicting_evidence",
+    "description": "Excellent credit but 4 claims — conflicting risk signals",
+    "input": {
+      "policyholder_id": "EVAL_PH_C01",
+      "age": 45,
+      "annual_income": 95000,
+      "credit_score": 790,
+      "policy_type": "auto",
+      "claims_history": [
+        {"amount": 8000,  "date": "2024-01-10"},
+        {"amount": 3500,  "date": "2023-06-20"},
+        {"amount": 12000, "date": "2022-11-05"},
+        {"amount": 1500,  "date": "2022-03-18"}
+      ],
+      "premium_amount": 2800
+    },
+    "expected": {
+      "recommendation_in": ["refer", "decline"],
+      "hard_decline": false,
+      "rule_flags_contains": ["high_severity_claims", "excellent_credit"]
+    }
+  },
+  {
+    "id": "EVAL_C02",
+    "category": "conflicting_evidence",
+    "description": "Young applicant (high age risk) but perfect credit and high income",
+    "input": {
+      "policyholder_id": "EVAL_PH_C02",
+      "age": 22,
+      "annual_income": 110000,
+      "credit_score": 780,
+      "policy_type": "auto",
+      "claims_history": [],
+      "premium_amount": 1600
+    },
+    "expected": {
+      "recommendation_in": ["approve", "refer"],
+      "hard_decline": false,
+      "rule_flags_contains": ["young_applicant", "excellent_credit", "high_income"]
+    }
+  },
+  {
+    "id": "EVAL_C03",
+    "category": "conflicting_evidence",
+    "description": "High income + good credit but very high premium ratio",
+    "input": {
+      "policyholder_id": "EVAL_PH_C03",
+      "age": 55,
+      "annual_income": 120000,
+      "credit_score": 730,
+      "policy_type": "commercial",
+      "claims_history": [{"amount": 45000, "date": "2023-08-01"}],
+      "premium_amount": 40000
+    },
+    "expected": {
+      "recommendation_in": ["refer", "decline"],
+      "hard_decline": false,
+      "rule_violations_contains": ["high_severity_claims_detected"]
+    }
+  },
+  {
+    "id": "EVAL_A01",
+    "category": "ambiguous",
+    "description": "Borderline risk score — near the Low/Medium boundary",
+    "input": {
+      "policyholder_id": "EVAL_PH_A01",
+      "age": 30,
+      "annual_income": 48000,
+      "credit_score": 695,
+      "policy_type": "auto",
+      "claims_history": [{"amount": 1800, "date": "2024-02-10"}],
+      "premium_amount": 1500
+    },
+    "expected": {
+      "recommendation_in": ["approve", "refer"],
+      "hard_decline": false,
+      "confidence_lt": 0.85
+    }
+  },
+  {
+    "id": "EVAL_A02",
+    "category": "ambiguous",
+    "description": "Senior applicant — age flag but otherwise solid profile",
+    "input": {
+      "policyholder_id": "EVAL_PH_A02",
+      "age": 72,
+      "annual_income": 68000,
+      "credit_score": 720,
+      "policy_type": "home",
+      "claims_history": [],
+      "premium_amount": 2200
+    },
+    "expected": {
+      "recommendation_in": ["refer", "approve"],
+      "hard_decline": false,
+      "rule_flags_contains": ["senior_applicant"]
+    }
+  },
+  {
+    "id": "EVAL_A03",
+    "category": "ambiguous",
+    "description": "Multiple moderate flags — no single dominant signal",
+    "input": {
+      "policyholder_id": "EVAL_PH_A03",
+      "age": 27,
+      "annual_income": 32000,
+      "credit_score": 595,
+      "policy_type": "renters",
+      "claims_history": [{"amount": 900, "date": "2023-12-01"}],
+      "premium_amount": 700
+    },
+    "expected": {
+      "recommendation_in": ["refer", "approve", "decline"],
+      "hard_decline": false,
+      "rationale_not_empty": true
+    }
+  },
+  {
+    "id": "EVAL_F01",
+    "category": "fail_safe",
+    "description": "Hard decline — applicant over maximum age",
+    "input": {
+      "policyholder_id": "EVAL_PH_F01",
+      "age": 85,
+      "annual_income": 45000,
+      "credit_score": 700,
+      "policy_type": "auto",
+      "claims_history": [],
+      "premium_amount": 3000
+    },
+    "expected": {
+      "recommendation": "decline",
+      "hard_decline": true,
+      "rule_violations_contains": ["age_above_maximum"]
+    }
+  },
+  {
+    "id": "EVAL_F02",
+    "category": "fail_safe",
+    "description": "Extreme multi-factor high risk — system must not approve",
+    "input": {
+      "policyholder_id": "EVAL_PH_F02",
+      "age": 19,
+      "annual_income": 7000,
+      "credit_score": 420,
+      "policy_type": "auto",
+      "claims_history": [
+        {"amount": 25000, "date": "2024-08-01"},
+        {"amount": 12000, "date": "2024-03-15"},
+        {"amount": 8000,  "date": "2023-10-20"}
+      ],
+      "premium_amount": 4800
+    },
+    "expected": {
+      "recommendation_not": "approve",
+      "hard_decline": false,
+      "risk_level": "High",
+      "severity_tier_in": ["HIGH", "CRITICAL"]
+    }
+  },
+  {
+    "id": "EVAL_F03",
+    "category": "fail_safe",
+    "description": "Credit below absolute floor with multiple violations — must refer or decline",
+    "input": {
+      "policyholder_id": "EVAL_PH_F03",
+      "age": 40,
+      "annual_income": 18000,
+      "credit_score": 480,
+      "policy_type": "auto",
+      "claims_history": [{"amount": 6000, "date": "2024-01-01"}],
+      "premium_amount": 2000
+    },
+    "expected": {
+      "recommendation_not": "approve",
+      "hard_decline": false,
+      "rule_violations_contains": ["credit_below_threshold", "income_below_minimum"]
+    }
+  }
+]
