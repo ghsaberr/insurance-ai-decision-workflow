@@ -161,11 +161,15 @@ class CaseManager:
         case_id = str(uuid.uuid4())
         now = _now()
 
+        # CRITICAL severity cases bypass the standard review queue and go
+        # directly to senior underwriter escalation.  See docs/severity.md.
+        initial_status = "escalated" if severity_tier == "CRITICAL" else "pending_review"
+
         case = Case(
             case_id=case_id,
             request_id=request_id,
             created_at=now,
-            status="pending_review",
+            status=initial_status,
             policyholder_id=policyholder_id_hashed,
             recommendation=recommendation,
             evidence_refs=evidence_refs,
@@ -190,7 +194,7 @@ class CaseManager:
                 ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
-                    case_id, request_id, now, "pending_review",
+                    case_id, request_id, now, initial_status,
                     policyholder_id_hashed,
                     json.dumps(recommendation),
                     json.dumps(evidence_refs),
@@ -206,9 +210,15 @@ class CaseManager:
             )
             self._log_event(conn, case_id, "case_created", actor="system",
                             detail={"workflow_mode": workflow_mode,
-                                    "severity_tier": severity_tier})
+                                    "severity_tier": severity_tier,
+                                    "initial_status": initial_status})
+            if severity_tier == "CRITICAL":
+                self._log_event(conn, case_id, "auto_escalated", actor="system",
+                                detail={"reason": "severity_tier=CRITICAL",
+                                        "routing": "senior_underwriter_required"})
 
-        logger.info("Case created: case_id=%s status=pending_review", case_id)
+        logger.info("Case created: case_id=%s status=%s severity=%s",
+                    case_id, initial_status, severity_tier)
         return case
 
     def submit_review(self, case_id: str, review: ReviewRequest) -> Case:

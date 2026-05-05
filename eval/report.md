@@ -1,6 +1,6 @@
 # Evaluation Report
 
-Generated: 2026-05-05 15:35 UTC  |  Mode: in-process / deterministic_only
+Generated: 2026-05-05 19:50 UTC  |  Mode: in-process / deterministic_only
 
 ## Summary
 
@@ -19,8 +19,8 @@ Generated: 2026-05-05 15:35 UTC  |  Mode: in-process / deterministic_only
 
 | ID | Description | Result | Rec | Mode | Latency |
 |----|-------------|--------|-----|------|---------|
-| EVAL_S01 | Clean profile — strong accept signals across all dimens | PASS | approve | deterministic_only | 312ms |
-| EVAL_S02 | Mid-range profile — good credit, stable income, single  | PASS | approve | deterministic_only | 140ms |
+| EVAL_S01 | Clean profile — strong accept signals across all dimens | PASS | approve | deterministic_only | 594ms |
+| EVAL_S02 | Mid-range profile — good credit, stable income, single  | PASS | approve | deterministic_only | 77ms |
 
 ### straightforward_decline  (1/1 passed)
 
@@ -32,33 +32,33 @@ Generated: 2026-05-05 15:35 UTC  |  Mode: in-process / deterministic_only
 
 | ID | Description | Result | Rec | Mode | Latency |
 |----|-------------|--------|-----|------|---------|
-| EVAL_M01 | No claims history provided — assessment should proceed  | PASS | approve | deterministic_only | 109ms |
-| EVAL_M02 | Income below minimum threshold — workflow should flag b | PASS | refer | deterministic_only | 93ms |
-| EVAL_M03 | No policy_start_date — claims recency check must not cr | PASS | approve | deterministic_only | 109ms |
+| EVAL_M01 | No claims history provided — assessment should proceed  | PASS | approve | deterministic_only | 77ms |
+| EVAL_M02 | Income below minimum threshold — workflow should flag b | PASS | refer | deterministic_only | 47ms |
+| EVAL_M03 | No policy_start_date — claims recency check must not cr | PASS | approve | deterministic_only | 0ms |
 
 ### conflicting_evidence  (3/3 passed)
 
 | ID | Description | Result | Rec | Mode | Latency |
 |----|-------------|--------|-----|------|---------|
-| EVAL_C01 | Excellent credit but 4 claims — conflicting risk signal | PASS | refer | deterministic_only | 30ms |
-| EVAL_C02 | Young applicant (high age risk) but perfect credit and  | PASS | approve | deterministic_only | 16ms |
-| EVAL_C03 | High income + good credit but very high premium ratio | PASS | refer | deterministic_only | 30ms |
+| EVAL_C01 | Excellent credit but 4 claims — conflicting risk signal | PASS | refer | deterministic_only | 16ms |
+| EVAL_C02 | Young applicant (high age risk) but perfect credit and  | PASS | approve | deterministic_only | 0ms |
+| EVAL_C03 | High income + good credit but very high premium ratio | PASS | refer | deterministic_only | 15ms |
 
 ### ambiguous  (3/3 passed)
 
 | ID | Description | Result | Rec | Mode | Latency |
 |----|-------------|--------|-----|------|---------|
-| EVAL_A01 | Borderline risk score — near the Low/Medium boundary | PASS | approve | deterministic_only | 16ms |
-| EVAL_A02 | Senior applicant — age flag but otherwise solid profile | PASS | approve | deterministic_only | 15ms |
-| EVAL_A03 | Multiple moderate flags — no single dominant signal | PASS | approve | deterministic_only | 15ms |
+| EVAL_A01 | Borderline risk score — near the Low/Medium boundary | PASS | approve | deterministic_only | 45ms |
+| EVAL_A02 | Senior applicant — age flag but otherwise solid profile | PASS | approve | deterministic_only | 0ms |
+| EVAL_A03 | Multiple moderate flags — no single dominant signal | PASS | approve | deterministic_only | 16ms |
 
 ### fail_safe  (3/3 passed)
 
 | ID | Description | Result | Rec | Mode | Latency |
 |----|-------------|--------|-----|------|---------|
 | EVAL_F01 | Hard decline — applicant over maximum age | PASS | decline | hard_decline | 0ms |
-| EVAL_F02 | Extreme multi-factor high risk — system must not approv | PASS | refer | deterministic_only | 0ms |
-| EVAL_F03 | Credit below absolute floor with multiple violations —  | PASS | refer | deterministic_only | 15ms |
+| EVAL_F02 | Extreme multi-factor high risk — system must not approv | PASS | refer | deterministic_only | 15ms |
+| EVAL_F03 | Credit below absolute floor with multiple violations —  | PASS | refer | deterministic_only | 0ms |
 
 ## Conclusions
 
