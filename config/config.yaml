@@ -1,0 +1,46 @@
+# Insurance AI Decision Workflow — runtime configuration
+#
+# Override any value with environment variables (see env.example).
+# Environment variables always take precedence over values here.
+
+api:
+  host: "0.0.0.0"
+  port: 8000
+  log_level: "INFO"
+
+llm:
+  provider: "anthropic"          # anthropic | ollama | none
+  anthropic_model: "claude-haiku-4-5-20251001"
+  ollama_model: "llama2:7b"
+  ollama_url: "http://localhost:11434"
+
+retrieval:
+  # Paths to FAISS artifacts produced by insurance-nlp-aws pipeline.
+  # Run:  cd ../Insurance-NLP-AWS && python run_pipeline.py --local
+  # Then copy/symlink the output files here, or point these paths at them.
+  index_path: "data/insurance_faiss.index"
+  metadata_path: "data/insurance_metadata.json"
+  embedding_model: "all-MiniLM-L6-v2"
+  top_k: 4
+
+severity:
+  # Path to fine-tuned LoRA adapter from claims-severity-prediction.
+  # Set SEVERITY_MODEL_PATH or leave blank to run in rule_based mode.
+  model_path: ""                 # e.g. "../Claims-Severity-Prediction/claims_severity_model"
+
+storage:
+  db_path: "data/workflow.db"   # SQLite database; survives process restarts
+
+governance:
+  human_role: "reviewer decides — model recommends only"
+  pii_hash_fields:
+    - policyholder_id
+    - annual_income
+    - credit_score
+  never_persist:
+    - name
+    - address
+    - ssn
+    - date_of_birth
+    - email
+    - phone

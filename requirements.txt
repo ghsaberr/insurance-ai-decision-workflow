@@ -1,0 +1,24 @@
+# ── API ─────────────────────────────────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+pydantic>=2.7.0
+
+# ── LLM ─────────────────────────────────────────────────────────────
+anthropic>=0.28.0          # primary LLM provider (Claude)
+requests>=2.31.0           # Ollama fallback
+
+# ── Retrieval (from insurance-nlp-aws pipeline output) ──────────────
+faiss-cpu>=1.8.0           # FAISS flat index; use faiss-gpu on GPU hosts
+sentence-transformers>=2.7.0  # all-MiniLM-L6-v2 embeddings
+
+# ── Severity model (from claims-severity-prediction) ─────────────────
+# peft>=0.11.0             # uncomment when GPU available for model mode
+# transformers>=4.41.0
+# torch>=2.3.0
+# accelerate>=0.30.0
+
+# ── Storage ──────────────────────────────────────────────────────────
+# sqlite3 is part of Python stdlib — no extra dep needed
+
+# ── Observability ────────────────────────────────────────────────────
+python-json-logger>=2.0.7

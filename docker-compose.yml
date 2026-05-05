@@ -1,0 +1,38 @@
+services:
+  workflow-api:
+    build: .
+    container_name: insurance-workflow-api
+    ports:
+      - "8000:8000"
+    environment:
+      - LLM_PROVIDER=${LLM_PROVIDER:-anthropic}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ANTHROPIC_MODEL=${ANTHROPIC_MODEL:-claude-haiku-4-5-20251001}
+      - OLLAMA_URL=${OLLAMA_URL:-http://ollama:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama2:7b}
+      - FAISS_INDEX_PATH=/app/data/insurance_faiss.index
+      - FAISS_METADATA_PATH=/app/data/insurance_metadata.json
+      - SEVERITY_MODEL_PATH=${SEVERITY_MODEL_PATH:-}
+      - DB_PATH=/app/data/workflow.db
+    volumes:
+      - workflow-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # Ollama — only needed if LLM_PROVIDER=ollama
+  # ollama:
+  #   image: ollama/ollama
+  #   container_name: ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama-data:/root/.ollama
+
+volumes:
+  workflow-data:
+  # ollama-data:
