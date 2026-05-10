@@ -43,6 +43,7 @@ audit_events
 
 import json
 import logging
+import os
 import sqlite3
 import threading
 import uuid
@@ -51,6 +52,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from src.privacy.pii_handler import redact_for_export
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +76,7 @@ CREATE TABLE IF NOT EXISTS cases (
     rules_version    TEXT,
     llm_available    INTEGER DEFAULT 1,
     workflow_mode    TEXT DEFAULT 'full',
+    hard_decline     INTEGER NOT NULL DEFAULT 0,
     reviewer_id      TEXT,
     reviewer_action  TEXT,
     reviewer_notes   TEXT,
@@ -113,6 +117,7 @@ class Case:
     rules_version: str
     llm_available: bool
     workflow_mode: str
+    hard_decline: bool = False
     reviewer_id: str | None = None
     reviewer_action: str | None = None
     reviewer_notes: str | None = None
@@ -136,7 +141,7 @@ class CaseManager:
     """
 
     def __init__(self, db_path: str | None = None):
-        self.db_path = db_path or _DB_PATH_DEFAULT
+        self.db_path = db_path or os.getenv("DB_PATH", _DB_PATH_DEFAULT)
         self._lock = threading.Lock()
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self._init_schema()
@@ -156,6 +161,7 @@ class CaseManager:
         versions: dict,
         llm_available: bool,
         workflow_mode: str,
+        hard_decline: bool = False,
     ) -> Case:
         """Persist a new case and return the Case object."""
         case_id = str(uuid.uuid4())
@@ -181,6 +187,7 @@ class CaseManager:
             rules_version=versions.get("rules_version", ""),
             llm_available=llm_available,
             workflow_mode=workflow_mode,
+            hard_decline=hard_decline,
         )
 
         with self._conn() as conn:
@@ -190,8 +197,8 @@ class CaseManager:
                     case_id, request_id, created_at, status,
                     policyholder_id, recommendation, evidence_refs, rule_findings,
                     severity_tier, model_version, prompt_version, kb_version,
-                    rules_version, llm_available, workflow_mode
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    rules_version, llm_available, workflow_mode, hard_decline
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """,
                 (
                     case_id, request_id, now, initial_status,
@@ -206,6 +213,7 @@ class CaseManager:
                     versions.get("rules_version", ""),
                     int(llm_available),
                     workflow_mode,
+                    int(hard_decline),
                 ),
             )
             self._log_event(conn, case_id, "case_created", actor="system",
@@ -240,7 +248,7 @@ class CaseManager:
 
         with self._conn() as conn:
             row = conn.execute(
-                "SELECT status FROM cases WHERE case_id = ?", (case_id,)
+                "SELECT status, hard_decline FROM cases WHERE case_id = ?", (case_id,)
             ).fetchone()
 
             if row is None:
@@ -250,6 +258,13 @@ class CaseManager:
                 raise ValueError(
                     f"Case {case_id} is already in terminal status '{row['status']}' "
                     "and cannot be updated."
+                )
+
+            if review.action == "approve" and bool(row["hard_decline"]):
+                raise ValueError(
+                    f"Case {case_id} was hard-declined by a mandatory eligibility rule. "
+                    "The 'approve' action is not permitted on hard-declined cases. "
+                    "Use 'escalate' or 'request_info' if the rule outcome needs review."
                 )
 
             conn.execute(
@@ -311,12 +326,17 @@ class CaseManager:
         return [dict(r) for r in rows]
 
     def export_audit_jsonl(self) -> str:
-        """Return all cases as a JSONL string suitable for audit export."""
+        """
+        Return all cases as a JSONL string suitable for audit export.
+
+        PII fields (policyholder_id, annual_income, credit_score) are
+        replaced with [REDACTED] — the hashed values are not exported.
+        """
         with self._conn() as conn:
             rows = conn.execute(
                 "SELECT * FROM cases ORDER BY created_at"
             ).fetchall()
-        lines = [json.dumps(dict(r)) for r in rows]
+        lines = [json.dumps(redact_for_export(dict(r))) for r in rows]
         return "\n".join(lines)
 
     def count_by_status(self) -> dict[str, int]:
@@ -349,6 +369,13 @@ class CaseManager:
         with self._conn() as conn:
             conn.execute(_CREATE_CASES)
             conn.execute(_CREATE_AUDIT)
+            # Migration: add hard_decline column for databases created before this field existed.
+            try:
+                conn.execute(
+                    "ALTER TABLE cases ADD COLUMN hard_decline INTEGER NOT NULL DEFAULT 0"
+                )
+            except sqlite3.OperationalError:
+                pass  # column already present
 
     @staticmethod
     def _log_event(
@@ -391,6 +418,7 @@ def _row_to_case(row: sqlite3.Row) -> Case:
         rules_version=d["rules_version"] or "",
         llm_available=bool(d.get("llm_available", 1)),
         workflow_mode=d.get("workflow_mode") or "full",
+        hard_decline=bool(d.get("hard_decline", 0)),
         reviewer_id=d["reviewer_id"],
         reviewer_action=d["reviewer_action"],
         reviewer_notes=d["reviewer_notes"],

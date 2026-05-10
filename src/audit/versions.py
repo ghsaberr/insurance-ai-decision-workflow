@@ -16,10 +16,10 @@ Versioning policy (see docs/governance.md):
 
 from dataclasses import dataclass
 
-MODEL_VERSION = "claude-haiku-4-5"    # or "ollama/llama2:7b" — set via config
-PROMPT_VERSION = "v1.0"
+PROMPT_VERSION = "v1.1"               # bumped: LLM schema now includes risk_score
 RULES_VERSION = "v1.0"
 KB_VERSION_FALLBACK = "unknown"        # overridden at runtime by DocumentLoader
+_MODEL_VERSION_FALLBACK = "unknown"    # overridden at runtime by the active LLM client
 
 
 @dataclass(frozen=True)
@@ -38,10 +38,18 @@ class VersionManifest:
         }
 
 
-def build_manifest(kb_version: str = KB_VERSION_FALLBACK) -> VersionManifest:
-    """Build the manifest for the current run using live component versions."""
+def build_manifest(
+    kb_version: str = KB_VERSION_FALLBACK,
+    model_version: str | None = None,
+) -> VersionManifest:
+    """
+    Build the manifest for the current run using live component versions.
+
+    model_version should be passed from the active LLM client so the audit
+    record reflects the actual model in use, not a hardcoded constant.
+    """
     return VersionManifest(
-        model_version=MODEL_VERSION,
+        model_version=model_version or _MODEL_VERSION_FALLBACK,
         prompt_version=PROMPT_VERSION,
         rules_version=RULES_VERSION,
         kb_version=kb_version,

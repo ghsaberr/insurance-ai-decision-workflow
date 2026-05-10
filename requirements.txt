@@ -20,5 +20,8 @@ sentence-transformers>=2.7.0  # all-MiniLM-L6-v2 embeddings
 # ── Storage ──────────────────────────────────────────────────────────
 # sqlite3 is part of Python stdlib — no extra dep needed
 
+# ── Configuration ────────────────────────────────────────────────────
+pyyaml>=6.0
+
 # ── Observability ────────────────────────────────────────────────────
 python-json-logger>=2.0.7

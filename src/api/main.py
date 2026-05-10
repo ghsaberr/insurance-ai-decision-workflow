@@ -24,15 +24,18 @@ Human role boundary
 """
 
 import logging
+import os
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Query, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Security, status
 from fastapi.responses import PlainTextResponse, JSONResponse
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
+import src.config as _cfg
 from src.audit.versions import build_manifest
 from src.privacy.pii_handler import mask_for_storage
 from src.review.case_manager import CaseManager, ReviewRequest
@@ -57,6 +60,15 @@ async def lifespan(app: FastAPI):
     global _orchestrator, _case_manager
     logger.info("Starting Insurance AI Decision Workflow...")
 
+    # Load config.yaml defaults before any component reads os.environ
+    _cfg.load()
+
+    if not os.getenv("API_KEY"):
+        logger.warning(
+            "API_KEY env var is not set — all endpoints are publicly accessible. "
+            "Set API_KEY before deploying to production."
+        )
+
     _case_manager = CaseManager()
     logger.info("CaseManager (SQLite) ready")
 
@@ -66,6 +78,30 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info("Shutting down")
+
+
+# ------------------------------------------------------------------ #
+#  API key authentication                                              #
+# ------------------------------------------------------------------ #
+
+_api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+async def _require_api_key(api_key: str | None = Security(_api_key_header)) -> None:
+    """
+    Require X-API-Key header when API_KEY env var is set.
+
+    If API_KEY is not configured the endpoint is open (development mode).
+    A startup warning is logged to remind operators to set it.
+    """
+    expected = os.getenv("API_KEY")
+    if not expected:
+        return  # open-access mode — operator was warned at startup
+    if api_key != expected:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing API key. Include the X-API-Key header.",
+        )
 
 
 app = FastAPI(
@@ -79,6 +115,7 @@ app = FastAPI(
     ),
     version="1.0.0",
     lifespan=lifespan,
+    dependencies=[Depends(_require_api_key)],
 )
 
 
@@ -137,6 +174,7 @@ class CaseResponse(BaseModel):
     severity_tier: str
     llm_available: bool
     workflow_mode: str
+    hard_decline: bool
     versions: dict
     reviewer_action: str | None
     reviewer_id: str | None
@@ -202,8 +240,11 @@ async def health():
 async def get_versions():
     """Current version manifest for all workflow components."""
     orch = _get_orchestrator()
-    kb_ver = orch._retriever.kb_version
-    return build_manifest(kb_ver).to_dict()
+    health_data = orch.health()
+    return build_manifest(
+        kb_version=health_data["retrieval"]["kb_version"],
+        model_version=health_data["llm_provider"],
+    ).to_dict()
 
 
 @app.post("/assess", response_model=AssessmentResponse, tags=["Workflow"])
@@ -259,6 +300,7 @@ async def assess(request: Request, payload: PolicyholderInput):
         versions=result.versions,
         llm_available=result.llm_available,
         workflow_mode=result.workflow_mode,
+        hard_decline=result.hard_decline,
     )
 
     logger.info(
@@ -399,6 +441,7 @@ def _case_to_dict(case) -> dict:
         "severity_tier": case.severity_tier,
         "llm_available": case.llm_available,
         "workflow_mode": case.workflow_mode,
+        "hard_decline": case.hard_decline,
         "versions": {
             "model_version": case.model_version,
             "prompt_version": case.prompt_version,

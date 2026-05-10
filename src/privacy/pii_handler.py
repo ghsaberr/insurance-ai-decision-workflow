@@ -13,13 +13,21 @@ See docs/governance.md — Data Retention Policy section.
 
 import hashlib
 import logging
+import os
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 _HASH_FIELDS = frozenset({"policyholder_id", "annual_income", "credit_score"})
 _DROP_FIELDS = frozenset({"name", "address", "ssn", "date_of_birth", "email", "phone"})
-_SALT = "insurance-workflow-v1"
+
+_SALT = os.getenv("PII_HASH_SALT", "")
+if not _SALT:
+    _SALT = "insurance-workflow-v1"
+    logger.warning(
+        "PII_HASH_SALT env var is not set — using insecure default salt. "
+        "Set PII_HASH_SALT to a unique secret before going to production."
+    )
 
 
 def _hash(value: Any) -> str:

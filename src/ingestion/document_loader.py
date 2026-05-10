@@ -84,11 +84,15 @@ class DocumentLoader:
                 if idx < 0 or idx >= len(self._metadata):
                     continue
                 meta = self._metadata[idx]
+                snippet = meta.get("text_snippet") or (
+                        f"Insurance policy document {meta.get('doc_id', f'DOC_{idx}')} "
+                        f"for policy {meta.get('policy_id', 'unknown')}."
+                    )
                 results.append(
                     RetrievedDoc(
                         doc_id=meta.get("doc_id", f"DOC_{idx}"),
                         policy_id=meta.get("policy_id", "unknown"),
-                        content_snippet=meta.get("text_snippet", ""),
+                        content_snippet=snippet,
                         distance=float(dist),
                         metadata=meta,
                     )
@@ -146,6 +150,22 @@ class DocumentLoader:
                 self._index.ntotal,
                 self.kb_version,
             )
+
+            # Warn when metadata lacks text content — retrieval will return
+            # minimal snippets and LLM grounding will be degraded.
+            empty = sum(1 for m in self._metadata if not m.get("text_snippet"))
+            if empty == len(self._metadata) and self._metadata:
+                logger.warning(
+                    "All %d metadata entries are missing 'text_snippet'. "
+                    "Rebuild the FAISS index with text content to enable LLM grounding. "
+                    "Retrieval will return placeholder snippets until then.",
+                    len(self._metadata),
+                )
+            elif empty:
+                logger.warning(
+                    "%d/%d metadata entries missing 'text_snippet'",
+                    empty, len(self._metadata),
+                )
         except ImportError as exc:
             logger.warning("DocumentLoader deps missing (%s) — retrieval disabled", exc)
         except Exception:

@@ -80,46 +80,46 @@ class RiskCalculator:
     @staticmethod
     def _age_risk(age: int) -> float:
         if age < 25 or age > 65:
-            return 20.0
+            return 100.0
         if age < 30:
-            return 15.0
+            return 75.0
         if age < 40:
-            return 5.0
+            return 25.0
         return 0.0
 
     @staticmethod
     def _credit_risk(score: int) -> float:
         if score < 500:
-            return 30.0
+            return 100.0
         if score < 600:
-            return 25.0
+            return 83.0
         if score < 700:
-            return 15.0
+            return 50.0
         if score < 750:
-            return 5.0
+            return 17.0
         return 0.0
 
     @staticmethod
     def _income_risk(income: float) -> float:
         if income < 30_000:
-            return 20.0
+            return 100.0
         if income < 50_000:
-            return 15.0
+            return 75.0
         if income < 75_000:
-            return 8.0
+            return 40.0
         if income < 100_000:
-            return 3.0
+            return 15.0
         return 0.0
 
     @staticmethod
     def _claims_risk(claims: list) -> float:
         n = len(claims)
         if n >= 5:
-            return 30.0
+            return 100.0
         if n >= 3:
-            return 25.0
+            return 83.0
         if n == 2:
-            return 15.0
+            return 50.0
         if n == 1:
-            return 8.0
+            return 27.0
         return 0.0

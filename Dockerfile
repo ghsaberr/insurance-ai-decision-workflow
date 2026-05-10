@@ -15,6 +15,10 @@ COPY . .
 # Data directory for SQLite and FAISS index
 RUN mkdir -p data
 
+# Run as non-root
+RUN useradd -m -u 1000 workflow && chown -R workflow:workflow /app
+USER workflow
+
 EXPOSE 8000
 
 CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -52,6 +52,7 @@ Output valid JSON matching this schema exactly:
   "recommendation": "approve" | "decline" | "refer" | "insufficient_evidence",
   "rationale": "<concise explanation citing specific evidence>",
   "confidence": <float 0.0–1.0>,
+  "risk_score": <int 0–100, your holistic assessment of overall risk>,
   "evidence_citations": ["<doc_id>", ...],
   "rule_conflicts": ["<description of any conflicting signals>"],
   "reviewer_guidance": "<what the reviewer should focus on>"
@@ -146,13 +147,14 @@ class WorkflowOrchestrator:
         final_score, final_level = _blend_scores(
             risk_result.score,
             llm_output.get("llm_risk_score"),
-            rule_result.violations,
-            request_data,
         )
 
         # 6 — Assemble result
         mode = "full" if llm_available else "deterministic_only"
-        versions = build_manifest(self._retriever.kb_version).to_dict()
+        versions = build_manifest(
+            self._retriever.kb_version,
+            model_version=self._llm_client.model_version,
+        ).to_dict()
 
         result = WorkflowResult(
             recommendation=llm_output.get("recommendation", _rule_recommendation(rule_result, final_score)),
@@ -195,7 +197,7 @@ class WorkflowOrchestrator:
         return {
             "retrieval": self._retriever.health(),
             "severity_mode": self._severity.mode,
-            "llm_provider": type(self._llm_client).__name__,
+            "llm_provider": self._llm_client.model_version,
             "llm_available": self._llm_client.is_available(),
         }
 
@@ -230,7 +232,10 @@ class WorkflowOrchestrator:
         start: float,
         data: dict,
     ) -> WorkflowResult:
-        versions = build_manifest(self._retriever.kb_version).to_dict()
+        versions = build_manifest(
+            self._retriever.kb_version,
+            model_version=self._llm_client.model_version,
+        ).to_dict()
         severity = self._severity.score(data)
         rationale = (
             f"Hard decline triggered by rule violations: "
@@ -285,6 +290,10 @@ class _AnthropicClient:
     def is_available(self) -> bool:
         return self._ok
 
+    @property
+    def model_version(self) -> str:
+        return self.model if self._ok else "anthropic/unavailable"
+
     def complete(self, system_prompt: str, user_message: str) -> str:
         response = self._client.messages.create(
             model=self.model,
@@ -324,6 +333,10 @@ class _OllamaClient:
     def is_available(self) -> bool:
         return self._ok
 
+    @property
+    def model_version(self) -> str:
+        return f"ollama/{self.model}"
+
     def complete(self, system_prompt: str, user_message: str) -> str:
         import requests
         full_prompt = f"SYSTEM:\n{system_prompt}\n\nUSER:\n{user_message}"
@@ -341,6 +354,11 @@ class _NoLLM:
     """Sentinel: no LLM configured."""
     def is_available(self) -> bool:
         return False
+
+    @property
+    def model_version(self) -> str:
+        return "none"
+
     def complete(self, *_) -> str:
         return ""
 
@@ -413,32 +431,21 @@ Based on the above, provide your structured recommendation as JSON."""
 def _blend_scores(
     calc_score: float,
     llm_score: float | None,
-    violations: list[str],
-    data: dict,
 ) -> tuple[float, str]:
+    """
+    Blend the deterministic calculator score with the optional LLM risk score.
+
+    When the LLM is available and returns a numeric risk_score, the final
+    score is 0.6 × deterministic + 0.4 × LLM.  When the LLM is unavailable
+    or returns no score, the deterministic score is used directly.
+
+    Both inputs are expected to be on the 0–100 scale.  The result is clamped
+    to [0, 100] and bucketed into Low / Medium / High.
+    """
     if llm_score is not None:
         final = 0.6 * calc_score + 0.4 * llm_score
     else:
         final = calc_score
-
-    # Hard floors for serious violations
-    age = int(data.get("age", 0))
-    credit = int(data.get("credit_score", 0))
-    income = float(data.get("annual_income", 0))
-    claims = len(data.get("claims_history", []))
-
-    triggers = sum([
-        age < 21, credit < 500, income < 10_000, claims >= 3
-    ])
-    if triggers >= 2 and final < 85:
-        final = 85.0
-    elif triggers == 1 and final < 70:
-        final = 70.0
-
-    # Hard cap for low-risk profiles
-    if credit >= 800 and 25 <= age <= 60 and claims == 0 and income >= 80_000:
-        if final > 30:
-            final = 30.0
 
     final = round(max(0.0, min(100.0, final)), 1)
     level = "High" if final >= 70 else "Medium" if final >= 40 else "Low"
@@ -486,13 +493,21 @@ def _parse_llm_json(text: str) -> dict:
         return {}
     try:
         parsed = json.loads(match.group())
-        # Validate expected keys
+        # Validate recommendation
         rec = parsed.get("recommendation", "")
         if rec not in {"approve", "decline", "refer", "insufficient_evidence"}:
             parsed["recommendation"] = "refer"
+        # Clamp confidence
         llm_confidence = float(parsed.get("confidence", 0.0))
         parsed["confidence"] = max(0.0, min(1.0, llm_confidence))
-        parsed["llm_risk_score"] = None   # LLM doesn't produce a numeric score; kept for blending
+        # Extract numeric risk score for blending (0–100)
+        raw_rs = parsed.get("risk_score")
+        try:
+            parsed["llm_risk_score"] = (
+                max(0.0, min(100.0, float(raw_rs))) if raw_rs is not None else None
+            )
+        except (TypeError, ValueError):
+            parsed["llm_risk_score"] = None
         return parsed
     except (json.JSONDecodeError, ValueError):
         logger.warning("LLM JSON parse failed")
