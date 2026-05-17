@@ -3,7 +3,7 @@
 ## Boundary
 
 ```
-insurance-nlp-aws                    Insurance-AI-Decision-Workflow
+insurance-nlp-aws                    insurance-ai-decision-workflow
 ─────────────────────────────────    ─────────────────────────────────────────
 PDF documents                    →   (consumed after pipeline runs)
   │
@@ -55,9 +55,9 @@ python run_pipeline.py --local          # ETL + index, no AWS required
 python run_pipeline.py
 
 # Then copy to this repo:
-cp insurance_faiss.index  ../Insurance-AI-Decision-Workflow/data/
-cp insurance_metadata.json ../Insurance-AI-Decision-Workflow/data/
-echo "faiss-$(date +%Y-%m-%d)" > ../Insurance-AI-Decision-Workflow/data/kb_version.txt
+cp insurance_faiss.index  ../insurance-ai-decision-workflow/data/
+cp insurance_metadata.json ../insurance-ai-decision-workflow/data/
+echo "faiss-$(date +%Y-%m-%d)" > ../insurance-ai-decision-workflow/data/kb_version.txt
 ```
 
 After copying, restart the workflow API so `DocumentLoader` picks up the

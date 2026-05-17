@@ -16,7 +16,7 @@ llm:
 
 retrieval:
   # Paths to FAISS artifacts produced by insurance-nlp-aws pipeline.
-  # Run:  cd ../Insurance-NLP-AWS && python run_pipeline.py --local
+  # Run:  cd ../insurance-nlp-aws && python run_pipeline.py --local
   # Then copy/symlink the output files here, or point these paths at them.
   index_path: "data/insurance_faiss.index"
   metadata_path: "data/insurance_metadata.json"
@@ -26,7 +26,7 @@ retrieval:
 severity:
   # Path to fine-tuned LoRA adapter from claims-severity-prediction.
   # Set SEVERITY_MODEL_PATH or leave blank to run in rule_based mode.
-  model_path: ""                 # e.g. "../Claims-Severity-Prediction/claims_severity_model"
+  model_path: ""                 # e.g. "../claims-severity-prediction/claims_severity_model"
 
 storage:
   db_path: "data/workflow.db"   # SQLite database; survives process restarts

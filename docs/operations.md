@@ -51,7 +51,7 @@ Environment variables take precedence over all values in `config/config.yaml`. T
 
 ```bash
 git clone <repo-url>
-cd Insurance-AI-Decision-Workflow
+cd insurance-ai-decision-workflow
 
 python -m venv .venv
 .venv\Scripts\activate          # Windows
@@ -163,9 +163,9 @@ When new policy documents are available, rebuild the FAISS index in `insurance-n
 python run_pipeline.py --local      # ETL + embedding + FAISS index, no AWS required
 
 # Copy artifacts
-cp insurance_faiss.index   ../Insurance-AI-Decision-Workflow/data/
-cp insurance_metadata.json ../Insurance-AI-Decision-Workflow/data/
-echo "faiss-$(date +%Y-%m-%d)" > ../Insurance-AI-Decision-Workflow/data/kb_version.txt
+cp insurance_faiss.index   ../insurance-ai-decision-workflow/data/
+cp insurance_metadata.json ../insurance-ai-decision-workflow/data/
+echo "faiss-$(date +%Y-%m-%d)" > ../insurance-ai-decision-workflow/data/kb_version.txt
 ```
 
 Restart the API after copying. `DocumentLoader` loads the index at startup, not dynamically. The `kb_version` on all subsequent cases will reflect the new build date.

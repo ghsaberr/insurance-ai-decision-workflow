@@ -58,7 +58,7 @@ flowchart TD
 ```bash
 # 1. Clone and create environment
 git clone <repo-url>
-cd Insurance-AI-Decision-Workflow
+cd insurance-ai-decision-workflow
 python -m venv .venv && .venv\Scripts\activate    # Windows
 # python -m venv .venv && source .venv/bin/activate  # Linux / macOS
 
@@ -70,9 +70,9 @@ cp .env.example .env
 # Edit .env — set ANTHROPIC_API_KEY, or set LLM_PROVIDER=none for deterministic-only mode
 
 # 4. (Optional) Build or refresh the FAISS index
-#    cd ../Insurance-NLP-AWS && python run_pipeline.py --local
-#    cp insurance_faiss.index ../Insurance-AI-Decision-Workflow/data/
-#    cp insurance_metadata.json ../Insurance-AI-Decision-Workflow/data/
+#    cd ../insurance-nlp-aws && python run_pipeline.py --local
+#    cp insurance_faiss.index ../insurance-ai-decision-workflow/data/
+#    cp insurance_metadata.json ../insurance-ai-decision-workflow/data/
 
 # 5. Start the API
 uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
@@ -204,8 +204,8 @@ Full request / response schemas: [docs/api_contract.md](docs/api_contract.md)
 
 | Repo | Role |
 |------|------|
-| [`insurance-nlp-aws`](../Insurance-NLP-AWS) | Ingestion and extraction — PDF ETL, NER, FAISS index build, AWS deployment |
-| [`claims-severity-prediction`](../Claims-Severity-Prediction) | Severity model — fine-tuned LoRA/QLoRA adapter for `SeverityScorer` |
+| [`insurance-nlp-aws`](../insurance-nlp-aws) | Ingestion and extraction — PDF ETL, NER, FAISS index build, AWS deployment |
+| [`claims-severity-prediction`](../claims-severity-prediction) | Severity model — fine-tuned LoRA/QLoRA adapter for `SeverityScorer` |
 
 The interface between `insurance-nlp-aws` and this repo is two files: `insurance_faiss.index` and `insurance_metadata.json`.  
 See [docs/ingestion_boundary.md](docs/ingestion_boundary.md) for the full boundary specification.

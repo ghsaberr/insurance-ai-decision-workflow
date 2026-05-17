@@ -35,7 +35,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _MODEL_PATH_DEFAULT = str(
-    Path(__file__).parents[3] / "Claims-Severity-Prediction" / "claims_severity_model"
+    Path(__file__).parents[3] / "claims-severity-prediction" / "claims_severity_model"
 )
 
 _TIER_THRESHOLDS = {

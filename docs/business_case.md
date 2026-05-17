@@ -103,9 +103,9 @@ This system is one component in a three-repository portfolio. Each repository ha
 
 | Repository | Role |
 |------------|------|
-| [`insurance-nlp-aws`](../Insurance-NLP-AWS) | Document ingestion pipeline — PDF extraction, NER, FAISS index construction, AWS deployment |
-| `Insurance-AI-Decision-Workflow` | **This repo** — Underwriting decision workflow, risk scoring, rule checking, severity routing, human review, audit |
-| [`claims-severity-prediction`](../Claims-Severity-Prediction) | Severity model — fine-tuned LoRA/QLoRA adapter that powers `SeverityScorer` when `SEVERITY_MODEL_PATH` is set |
+| [`insurance-nlp-aws`](../insurance-nlp-aws) | Document ingestion pipeline — PDF extraction, NER, FAISS index construction, AWS deployment |
+| `insurance-ai-decision-workflow` | **This repo** — Underwriting decision workflow, risk scoring, rule checking, severity routing, human review, audit |
+| [`claims-severity-prediction`](../claims-severity-prediction) | Severity model — fine-tuned LoRA/QLoRA adapter that powers `SeverityScorer` when `SEVERITY_MODEL_PATH` is set |
 
 The interface from `insurance-nlp-aws` to this repo is two files: `insurance_faiss.index` and `insurance_metadata.json`. The interface from `claims-severity-prediction` is one directory: the LoRA adapter at `SEVERITY_MODEL_PATH`. Neither companion repository contains underwriting logic; this repo contains no ingestion or model-training logic.
 

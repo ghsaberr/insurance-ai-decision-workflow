@@ -84,7 +84,7 @@ The mode is always declared — reviewers can weight their judgment accordingly.
 To enable model mode:
 ```bash
 # Point to the fine-tuned LoRA adapter
-export SEVERITY_MODEL_PATH=../Claims-Severity-Prediction/claims_severity_model
+export SEVERITY_MODEL_PATH=../claims-severity-prediction/claims_severity_model
 # Install deps (GPU recommended)
 pip install peft transformers torch accelerate
 ```
